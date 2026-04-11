@@ -1,0 +1,4 @@
+# file: C:\Users\ultij\PycharmProjects\myFirstRepos\av_sim_testbench\scenarios\schema.py
+# hypothesis_version: 6.151.12
+
+[0.0, 30.0, 'adverse_weather', 'cut_in', 'day', 'emergency_vehicle', 'highway', 'intersection', 'pedestrian', 'replay', 'urban']

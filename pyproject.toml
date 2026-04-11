@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "av_sim_testbench"
+version = "0.1.0"
+description = "Scalable AV simulation test framework for autonomous vehicle validation"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "BitShifter" }]
+keywords = ["autonomous-vehicles", "simulation", "testing", "ADAS", "AV"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+    "prometheus-client>=0.19",
+    "jinja2>=3.1",
+    "structlog>=24.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=4.1",
+    "hypothesis>=6.100",
+    "ruff>=0.3",
+    "mypy>=1.8",
+]
+distributed = [
+    "ray>=2.9",
+]
+
+[project.scripts]
+av-sim = "main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["tests*", "*.history*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+ignore = ["E501", "B008"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+ignore_missing_imports = true
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+files = ["scenarios", "runner", "metrics", "ml", "replay", "catalog", "observability"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["."]
+omit = ["tests/*", ".venv/*", "infra/*", "*.history*"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 70
