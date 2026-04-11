@@ -1,0 +1,93 @@
+// AV Sim Testbench — Jenkins Declarative Pipeline
+// Runs on every PR: lint → unit tests → Docker build → smoke suite → publish report
+
+pipeline {
+    agent {
+        docker {
+            image 'python:3.11-slim'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
+
+    options {
+        timeout(time: 60, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+        disableConcurrentBuilds()
+    }
+
+    environment {
+        PYTHONPATH = "${WORKSPACE}"
+        REPORT_DIR = "${WORKSPACE}/reports"
+    }
+
+    stages {
+        stage('Setup') {
+            steps {
+                sh 'pip install --quiet -r requirements.txt'
+                sh 'pip install --quiet pytest pytest-asyncio pytest-cov ruff'
+            }
+        }
+
+        stage('Lint') {
+            steps {
+                sh 'ruff check . --output-format=github'
+            }
+        }
+
+        stage('Unit Tests') {
+            steps {
+                sh '''
+                    pytest tests/ \
+                        -v \
+                        --tb=short \
+                        --junitxml=reports/junit.xml \
+                        --cov=. \
+                        --cov-report=xml:reports/coverage.xml
+                '''
+            }
+            post {
+                always {
+                    junit 'reports/junit.xml'
+                    publishCoverage adapters: [coberturaAdapter('reports/coverage.xml')]
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -f infra/Dockerfile -t av-sim-testbench:${GIT_COMMIT} .'
+            }
+        }
+
+        stage('Smoke Suite') {
+            steps {
+                sh '''
+                    python main.py \
+                        --suite smoke \
+                        --workers 4 \
+                        --report reports/smoke_${BUILD_NUMBER}.json
+                '''
+            }
+        }
+
+        stage('Regression Check') {
+            steps {
+                sh '''
+                    python main.py \
+                        --replay-baseline baselines/baseline.json \
+                        --report reports/regression_${BUILD_NUMBER}.json
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: 'reports/**/*.json', fingerprint: true
+            cleanWs()
+        }
+        failure {
+            echo "Pipeline failed — check reports/ for details"
+        }
+    }
+}

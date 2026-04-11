@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  testbench:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      target: base
+    environment:
+      - SIM_WORKERS=8
+      - LOG_LEVEL=INFO
+    volumes:
+      - ../reports:/app/reports
+    command: ["--suite", "full", "--workers", "8", "--report", "reports/latest.json"]
+
+  test:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      target: test
+    volumes:
+      - ../reports:/app/reports
