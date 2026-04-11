@@ -105,10 +105,10 @@ class ScenarioGenerator:
         """Yield n randomly parameterized scenarios for fuzz testing."""
         rng = random.Random(seed)
         categories = list(ScenarioCategory)
-        for _ in range(n):
+        for i in range(n):
             cat = rng.choice(categories)
             yield Scenario(
-                scenario_id=f"fuzz_{uuid.uuid4().hex[:8]}",
+                scenario_id=f"fuzz_{seed}_{i}_{rng.randint(0, 0xFFFFFF):06x}",
                 category=cat,
                 description=f"Fuzz scenario [{cat}]",
                 ego_initial_speed_mps=rng.uniform(0.0, 35.0),

@@ -120,7 +120,8 @@ def _welch_t_test(a: list[float], b: list[float]) -> float:
     n1, n2 = len(a), len(b)
     v1, v2 = _variance(a), _variance(b)
     if v1 == 0 and v2 == 0:
-        return 1.0
+        # No variance — if means differ, result is significant; otherwise not
+        return 0.0 if _mean(a) != _mean(b) else 1.0
     se = math.sqrt(v1 / n1 + v2 / n2)
     if se == 0:
         return 1.0
