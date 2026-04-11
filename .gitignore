@@ -3,9 +3,13 @@ __pycache__/
 *.pyo
 .pytest_cache/
 .ruff_cache/
+.hypothesis/
 reports/
+catalog/*.db
 *.egg-info/
 dist/
 build/
 .venv/
 bazel-*
+*.so
+*.pyd

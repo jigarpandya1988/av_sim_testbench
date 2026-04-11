@@ -1,4 +1,0 @@
-# file: C:\Users\ultij\PycharmProjects\myFirstRepos\av_sim_testbench\runner\engine.py
-# hypothesis_version: 6.151.12
-
-[0.0, 0.02, 0.05, 0.08, 0.1, 0.3, 0.5, 0.7, 0.8, 1.0, 3.5, 8.0, 120.0, '[%s] %s in %.2fs', 'avg_jerk_mps3', 'collision_count', 'completion_rate', 'error', 'failed', 'lane_deviation_m', 'min_ttc_s', 'passed', 'skipped', 'timeout']

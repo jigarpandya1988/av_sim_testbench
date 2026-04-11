@@ -1,4 +1,0 @@
-# file: C:\Users\ultij\PycharmProjects\myFirstRepos\av_sim_testbench\metrics\scoring.py
-# hypothesis_version: 6.151.12
-
-[0.0, 0.1, 0.15, 0.2, 0.4, 0.5, 1.0, 1.5, 3.0, 5.0, 'RunResult', 'Scenario', 'avg_jerk_mps3', 'category_breakdown', 'collision_count', 'completion_rate', 'error', 'failed', 'id', 'lane_deviation_m', 'metrics', 'min_ttc_s', 'pass_rate', 'passed', 'scenario_incomplete', 'scenarios', 'score', 'summary', 'timeout', 'total', 'unknown', 'violations']

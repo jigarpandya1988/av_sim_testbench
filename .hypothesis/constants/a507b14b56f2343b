@@ -1,4 +1,0 @@
-# file: C:\Users\ultij\PycharmProjects\myFirstRepos\av_sim_testbench\ml\regression_detector.py
-# hypothesis_version: 6.151.12
-
-[-0.3, -0.02, 0.0, 0.01, 0.05, 0.1, 0.5, 1.0, 100, 'avg_jerk_mps3', 'collision_rate', 'completion_rate', 'lane_deviation_m', 'min_ttc_s', 'ok']
