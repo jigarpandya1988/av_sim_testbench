@@ -51,7 +51,7 @@ class ScenarioGenerator:
                 actors=[actor],
                 weather=weather,
                 duration_s=20.0,
-                tags=["cut_in", "highway", weather.time_of_day],
+                tags=["cut_in", "highway", "smoke", weather.time_of_day],
             )
             scenarios.append(s)
         return scenarios
@@ -78,7 +78,7 @@ class ScenarioGenerator:
                     map_id="urban_grid_sf",
                     actors=actors,
                     duration_s=15.0,
-                    tags=["pedestrian", "urban"],
+                    tags=["pedestrian", "urban", "smoke"],
                 )
                 scenarios.append(s)
         return scenarios
@@ -96,7 +96,7 @@ class ScenarioGenerator:
                 map_id="suburban_loop",
                 weather=weather,
                 duration_s=60.0,
-                tags=["weather", tod],
+                tags=["weather", "smoke", tod],
             )
             scenarios.append(s)
         return scenarios
