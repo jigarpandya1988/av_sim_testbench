@@ -68,12 +68,16 @@ class MLRegressionDetector:
             if not base_vals or not cand_vals:
                 continue
 
+            # Skip non-numeric keys (e.g. "vehicle_profile", "adas_generation")
+            if not isinstance(base_vals[0], (int, float)):
+                continue
+
             base_mean = _mean(base_vals)
             cand_mean = _mean(cand_vals)
             delta = cand_mean - base_mean
             delta_pct = (delta / base_mean * 100) if base_mean != 0 else 0.0
 
-            p_value = _welch_t_test(base_vals, cand_vals)
+            p_value = _welch_t_test(base_vals, cand_vals, base_mean, cand_mean)
             threshold = self._REGRESSION_THRESHOLDS.get(key)
 
             regressed = False
@@ -110,23 +114,23 @@ def _mean(vals: list[float]) -> float:
     return sum(vals) / len(vals)
 
 
-def _variance(vals: list[float]) -> float:
-    m = _mean(vals)
-    return sum((v - m) ** 2 for v in vals) / max(len(vals) - 1, 1)
-
-
-def _welch_t_test(a: list[float], b: list[float]) -> float:
-    """Return approximate two-tailed p-value using Welch's t-test."""
+def _welch_t_test(a: list[float], b: list[float], mean_a: float | None = None, mean_b: float | None = None) -> float:
+    """Return approximate two-tailed p-value using Welch's t-test.
+    
+    Accepts pre-computed means to avoid redundant recalculation.
+    """
     n1, n2 = len(a), len(b)
-    v1, v2 = _variance(a), _variance(b)
+    # Reuse pre-computed means if provided
+    ma = mean_a if mean_a is not None else _mean(a)
+    mb = mean_b if mean_b is not None else _mean(b)
+    v1 = sum((v - ma) ** 2 for v in a) / max(n1 - 1, 1)
+    v2 = sum((v - mb) ** 2 for v in b) / max(n2 - 1, 1)
     if v1 == 0 and v2 == 0:
-        # No variance — if means differ, result is significant; otherwise not
-        return 0.0 if _mean(a) != _mean(b) else 1.0
+        return 0.0 if ma != mb else 1.0
     se = math.sqrt(v1 / n1 + v2 / n2)
     if se == 0:
         return 1.0
-    t = (_mean(a) - _mean(b)) / se
-    # Approximate p-value via normal CDF for large n
+    t = (ma - mb) / se
     p = 2 * (1 - _norm_cdf(abs(t)))
     return max(0.0, min(1.0, p))
 

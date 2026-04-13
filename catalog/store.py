@@ -96,89 +96,59 @@ class ScenarioCatalog:
 
     # --- Scenario registration ---
 
+    @staticmethod
+    def _scenario_tuple(s) -> tuple:
+        return (
+            s.scenario_id,
+            s.category.value,
+            s.description,
+            s.map_id,
+            json.dumps(s.tags),
+            datetime.now(timezone.utc).isoformat(),
+        )
+
+    _SCENARIO_UPSERT = """
+        INSERT OR REPLACE INTO scenarios
+            (scenario_id, category, description, map_id, tags, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """
+
     def register_scenario(self, scenario) -> None:
         """Upsert a scenario definition into the catalog."""
         with self._conn() as conn:
-            conn.execute(
-                """
-                INSERT OR REPLACE INTO scenarios
-                    (scenario_id, category, description, map_id, tags, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    scenario.scenario_id,
-                    scenario.category.value,
-                    scenario.description,
-                    scenario.map_id,
-                    json.dumps(scenario.tags),
-                    datetime.now(timezone.utc).isoformat(),
-                ),
-            )
+            conn.execute(self._SCENARIO_UPSERT, self._scenario_tuple(scenario))
 
     def register_scenarios_bulk(self, scenarios: list) -> None:
         with self._conn() as conn:
-            conn.executemany(
-                """
-                INSERT OR REPLACE INTO scenarios
-                    (scenario_id, category, description, map_id, tags, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                [
-                    (
-                        s.scenario_id,
-                        s.category.value,
-                        s.description,
-                        s.map_id,
-                        json.dumps(s.tags),
-                        datetime.now(timezone.utc).isoformat(),
-                    )
-                    for s in scenarios
-                ],
-            )
+            # generator avoids materialising all tuples into memory at once
+            conn.executemany(self._SCENARIO_UPSERT, (self._scenario_tuple(s) for s in scenarios))
 
     # --- Run recording ---
+
+    @staticmethod
+    def _run_tuple(r: RunRecord) -> tuple:
+        return (
+            r.scenario_id, r.model_version, r.status, r.duration_s,
+            json.dumps(r.metrics), json.dumps(r.violations),
+            r.weighted_score, r.ran_at,
+        )
+
+    _RUN_INSERT = """
+        INSERT INTO runs
+            (scenario_id, model_version, status, duration_s,
+             metrics, violations, weighted_score, ran_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """
 
     def record_run(self, record: RunRecord) -> int:
         """Insert a run result. Returns the new run_id."""
         with self._conn() as conn:
-            cur = conn.execute(
-                """
-                INSERT INTO runs
-                    (scenario_id, model_version, status, duration_s,
-                     metrics, violations, weighted_score, ran_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    record.scenario_id,
-                    record.model_version,
-                    record.status,
-                    record.duration_s,
-                    json.dumps(record.metrics),
-                    json.dumps(record.violations),
-                    record.weighted_score,
-                    record.ran_at,
-                ),
-            )
+            cur = conn.execute(self._RUN_INSERT, self._run_tuple(record))
             return cur.lastrowid  # type: ignore[return-value]
 
     def record_runs_bulk(self, records: list[RunRecord]) -> None:
         with self._conn() as conn:
-            conn.executemany(
-                """
-                INSERT INTO runs
-                    (scenario_id, model_version, status, duration_s,
-                     metrics, violations, weighted_score, ran_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                [
-                    (
-                        r.scenario_id, r.model_version, r.status, r.duration_s,
-                        json.dumps(r.metrics), json.dumps(r.violations),
-                        r.weighted_score, r.ran_at,
-                    )
-                    for r in records
-                ],
-            )
+            conn.executemany(self._RUN_INSERT, (self._run_tuple(r) for r in records))
 
     # --- Queries ---
 
@@ -218,27 +188,32 @@ class ScenarioCatalog:
     def metric_trend(self, scenario_id: str, metric: str, last_n: int = 20) -> list[float]:
         """Return the last N values of a metric for a scenario (oldest first)."""
         with self._conn() as conn:
+            # ORDER BY ASC directly — avoids Python-side reversal
             rows = conn.execute(
                 """
-                SELECT metrics FROM runs
-                WHERE scenario_id = ?
-                ORDER BY ran_at DESC
-                LIMIT ?
+                SELECT metrics FROM (
+                    SELECT metrics, ran_at FROM runs
+                    WHERE scenario_id = ?
+                    ORDER BY ran_at DESC
+                    LIMIT ?
+                ) ORDER BY ran_at ASC
                 """,
                 (scenario_id, last_n),
             ).fetchall()
-        values = []
-        for row in reversed(rows):
-            m = json.loads(row["metrics"])
-            if metric in m:
-                values.append(m[metric])
-        return values
+        return [
+            json.loads(row["metrics"])[metric]
+            for row in rows
+            if metric in json.loads(row["metrics"])
+        ]
 
     def recent_runs(self, limit: int = 100, model_version: str | None = None) -> list[dict]:
-        where = "WHERE model_version = ?" if model_version else ""
-        params = (model_version, limit) if model_version else (limit,)
+        # Parameterised query — no f-string SQL
+        if model_version:
+            sql = "SELECT * FROM runs WHERE model_version = ? ORDER BY ran_at DESC LIMIT ?"
+            params: tuple = (model_version, limit)
+        else:
+            sql = "SELECT * FROM runs ORDER BY ran_at DESC LIMIT ?"
+            params = (limit,)
         with self._conn() as conn:
-            rows = conn.execute(
-                f"SELECT * FROM runs {where} ORDER BY ran_at DESC LIMIT ?", params
-            ).fetchall()
+            rows = conn.execute(sql, params).fetchall()
         return [dict(r) for r in rows]

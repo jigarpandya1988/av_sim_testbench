@@ -119,10 +119,22 @@ bazel test //...
 
 ```bash
 pip install pybind11
+
+# Linux / macOS
 cd cpp && mkdir build && cd build
-cmake .. && make -j$(nproc)
-cp av_metrics_cpp*.so ../../
+cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake --build . --parallel
+cp av_metrics_cpp*.so ../../       # Linux: .so  |  macOS: .dylib
+
+# Windows (PowerShell)
+cd cpp; mkdir build; cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake --build . --config Release --parallel
+Copy-Item av_metrics_cpp*.pyd ../..
 ```
+
+> The Python bridge (`cpp/metrics_bridge.py`) falls back to pure Python automatically
+> if the compiled extension is not present — no build required to run the framework.
 
 ---
 

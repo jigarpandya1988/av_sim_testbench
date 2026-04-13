@@ -7,7 +7,6 @@ Compatible with Datadog, Splunk, and CloudWatch log ingestion.
 from __future__ import annotations
 
 import logging
-import os
 import sys
 
 import structlog
@@ -22,7 +21,11 @@ def configure_logging(level: str = "INFO", json_output: bool | None = None) -> N
         json_output: Force JSON output. Auto-detects TTY if None.
     """
     if json_output is None:
-        json_output = not sys.stdout.isatty()
+        # isatty() can raise on some Windows CI environments (no real TTY attached)
+        try:
+            json_output = not sys.stdout.isatty()
+        except Exception:  # noqa: BLE001
+            json_output = True  # default to JSON in unknown/CI environments
 
     log_level = getattr(logging, level.upper(), logging.INFO)
 

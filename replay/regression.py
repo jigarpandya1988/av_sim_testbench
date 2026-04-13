@@ -11,7 +11,13 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+from metrics.scoring import MetricsScorer
+from runner.engine import RunResult, RunStatus
+
 logger = logging.getLogger(__name__)
+
+# Shared scorer instance — scoring logic lives in one place only
+_scorer = MetricsScorer()
 
 
 @dataclass
@@ -30,20 +36,20 @@ class ReplayRegressionRunner:
     using replay logs.
 
     Regression is flagged when score drops more than `tolerance` points.
+    Scoring is delegated to MetricsScorer — no duplicated logic.
     """
 
-    def __init__(self, baseline_path: Path, tolerance: float = 0.05):
+    def __init__(self, baseline_path: Path, tolerance: float = 0.05) -> None:
         self._baseline_path = baseline_path
         self._tolerance = tolerance
         self._baseline: dict[str, float] = self._load_baseline()
 
-    def run(self, log_paths: list[Path], scorer) -> list[ReplayResult]:
+    def run(self, log_paths: list[Path]) -> list[ReplayResult]:
         """
         Run replay regression for a list of drive logs.
 
         Args:
             log_paths: Paths to recorded drive log files.
-            scorer: MetricsScorer instance for scoring results.
 
         Returns:
             List of ReplayResult with regression flags.
@@ -53,10 +59,8 @@ class ReplayRegressionRunner:
             log_id = log_path.stem
             logger.info("Running replay: %s", log_id)
 
-            # Convert log → scenario → run → score
-            scenario = self._log_to_scenario(log_path)
-            metrics = self._run_replay(scenario)
-            current_score = self._compute_score(metrics)
+            metrics = self._run_replay(log_path)
+            current_score = self._score_metrics(log_id, metrics)
 
             baseline_score = self._baseline.get(log_id, current_score)
             delta = current_score - baseline_score
@@ -64,7 +68,7 @@ class ReplayRegressionRunner:
 
             if regressed:
                 logger.warning(
-                    "REGRESSION detected in %s: %.3f → %.3f (Δ%.3f)",
+                    "REGRESSION %s: %.3f → %.3f (Δ%.3f)",
                     log_id, baseline_score, current_score, delta,
                 )
 
@@ -90,18 +94,18 @@ class ReplayRegressionRunner:
     # --- Internal helpers ---
 
     def _load_baseline(self) -> dict[str, float]:
-        if self._baseline_path.exists():
-            return json.loads(self._baseline_path.read_text())
-        return {}
+        if not self._baseline_path.exists():
+            return {}
+        try:
+            return json.loads(self._baseline_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.warning("Could not load baseline from %s: %s — starting fresh", self._baseline_path, exc)
+            return {}
 
-    def _log_to_scenario(self, log_path: Path) -> dict:
-        """Parse a drive log into a scenario descriptor. Stub implementation."""
-        return {"log_id": log_path.stem, "path": str(log_path)}
-
-    def _run_replay(self, scenario: dict) -> dict:
+    def _run_replay(self, log_path: Path) -> dict:
         """Execute replay in sim and return raw metrics. Stub — replace with sim SDK."""
         import random
-        rng = random.Random(scenario["log_id"])
+        rng = random.Random(log_path.stem)
         return {
             "collision_count": 0,
             "min_ttc_s": rng.uniform(2.0, 8.0),
@@ -111,15 +115,13 @@ class ReplayRegressionRunner:
             "speed_limit_violations": 0,
         }
 
-    def _compute_score(self, metrics: dict) -> float:
-        """Simple weighted score — mirrors MetricsScorer logic."""
-        weights = {"min_ttc_s": 0.3, "avg_jerk_mps3": 0.2, "lane_deviation_m": 0.2, "completion_rate": 0.3}
-        score = (
-            weights["min_ttc_s"] * min(metrics.get("min_ttc_s", 0) / 5.0, 1.0)
-            + weights["avg_jerk_mps3"] * max(0.0, 1.0 - metrics.get("avg_jerk_mps3", 0) / 5.0)
-            + weights["lane_deviation_m"] * max(0.0, 1.0 - metrics.get("lane_deviation_m", 0))
-            + weights["completion_rate"] * metrics.get("completion_rate", 0.0)
+    def _score_metrics(self, log_id: str, metrics: dict) -> float:
+        """Score via MetricsScorer — single source of truth for scoring logic."""
+        result = RunResult(
+            scenario_id=log_id,
+            status=RunStatus.PASSED,
+            duration_s=0.0,
+            metrics=metrics,
         )
-        if metrics.get("collision_count", 0) > 0:
-            score *= 0.0  # hard zero on collision
-        return round(score, 4)
+        report = _scorer.score_suite([result])
+        return round(report.scores[0].weighted_score, 4) if report.scores else 0.0

@@ -28,6 +28,7 @@ except ImportError:
 def run_suite_distributed(
     scenarios: list[Scenario],
     sim_adapter: Callable[[Scenario], dict] | None = None,
+    workers: int = 8,
     num_cpus: int | None = None,
     timeout_s: float = 120.0,
     max_retries: int = 2,
@@ -52,7 +53,7 @@ def run_suite_distributed(
         from runner.engine import SimulationRunner
         runner = SimulationRunner(
             sim_adapter=sim_adapter,
-            workers=8,
+            workers=num_cpus or workers or 8,
             timeout_s=timeout_s,
             max_retries=max_retries,
         )

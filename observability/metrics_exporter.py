@@ -9,14 +9,11 @@ Metrics naming follows Prometheus best practices:
 """
 from __future__ import annotations
 
-import time
-
 try:
     from prometheus_client import (
         Counter,
         Gauge,
         Histogram,
-        Summary,
         CollectorRegistry,
         push_to_gateway,
         start_http_server,

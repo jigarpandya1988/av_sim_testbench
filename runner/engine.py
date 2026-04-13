@@ -56,6 +56,9 @@ class SimulationRunner:
 
     async def run_suite(self, scenarios: list[Scenario]) -> list[RunResult]:
         """Run all scenarios concurrently up to worker limit."""
+        if not scenarios:
+            logger.warning("run_suite called with empty scenario list")
+            return []
         semaphore = asyncio.Semaphore(self._workers)
         tasks = [self._run_with_semaphore(s, semaphore) for s in scenarios]
         results = await asyncio.gather(*tasks, return_exceptions=False)

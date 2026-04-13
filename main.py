@@ -24,7 +24,6 @@ from catalog.store import ScenarioCatalog, RunRecord
 from observability.metrics_exporter import SimMetricsExporter
 from reports.html_reporter import HTMLReporter
 
-configure_logging()
 logger = get_logger("main")
 
 
@@ -64,17 +63,14 @@ async def run_sim_suite(args: argparse.Namespace) -> int:
     scenarios = build_suite(args.suite)
     logger.info("suite_start", suite=args.suite, total=len(scenarios), workers=args.workers)
 
-    # Observability
     exporter = SimMetricsExporter()
     if args.metrics_port:
         exporter.start_server(port=args.metrics_port)
         logger.info("prometheus_server_started", port=args.metrics_port)
 
-    # Catalog
     catalog = ScenarioCatalog(db_path=args.db)
     catalog.register_scenarios_bulk(scenarios)
 
-    # Run
     if args.distributed:
         from runner.distributed import run_suite_distributed
         results = run_suite_distributed(scenarios, workers=args.workers, timeout_s=args.timeout)
@@ -82,17 +78,17 @@ async def run_sim_suite(args: argparse.Namespace) -> int:
         runner = SimulationRunner(workers=args.workers, timeout_s=args.timeout)
         results = await runner.run_suite(scenarios)
 
-    # Score
     scorer = MetricsScorer()
     scenarios_by_id = {s.scenario_id: s for s in scenarios}
+    # Build duration lookup once — avoids O(n²) linear scans below
+    duration_by_id = {r.scenario_id: r.duration_s for r in results}
     report = scorer.score_suite(results, scenarios_by_id)
 
-    # Persist to catalog
     run_records = [
         RunRecord(
             scenario_id=score.scenario_id,
             status="passed" if score.passed else "failed",
-            duration_s=next((r.duration_s for r in results if r.scenario_id == score.scenario_id), 0.0),
+            duration_s=duration_by_id.get(score.scenario_id, 0.0),
             metrics=score.raw_metrics,
             violations=score.violations,
             weighted_score=score.weighted_score,
@@ -102,7 +98,6 @@ async def run_sim_suite(args: argparse.Namespace) -> int:
     ]
     catalog.record_runs_bulk(run_records)
 
-    # Prometheus summary
     collision_count = sum(1 for s in report.scores if any("collision" in v for v in s.violations))
     exporter.update_suite_summary(
         pass_rate=report.pass_rate,
@@ -114,7 +109,7 @@ async def run_sim_suite(args: argparse.Namespace) -> int:
             scenario_id=score.scenario_id,
             category=cat.category.value if cat else "unknown",
             passed=score.passed,
-            duration_s=next((r.duration_s for r in results if r.scenario_id == score.scenario_id), 0.0),
+            duration_s=duration_by_id.get(score.scenario_id, 0.0),
             metrics=score.raw_metrics,
         )
 
@@ -150,9 +145,8 @@ def run_replay(args: argparse.Namespace) -> int:
         return 0
 
     exporter = SimMetricsExporter()
-    scorer = MetricsScorer()
     runner = ReplayRegressionRunner(baseline_path=args.replay_baseline)
-    results = runner.run(log_paths, scorer)
+    results = runner.run(log_paths)  # scorer is internal now
 
     regressions = [r for r in results if r.regressed]
     for _ in regressions:
@@ -168,7 +162,10 @@ def run_replay(args: argparse.Namespace) -> int:
 
 def main() -> int:
     args = parse_args()
-    configure_logging(level=args.log_level)
+    configure_logging(level=args.log_level)  # single call, after args parsed
+
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     if args.replay:
         return run_replay(args)

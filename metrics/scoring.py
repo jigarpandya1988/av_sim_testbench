@@ -72,8 +72,13 @@ class SuiteReport:
         }
         out = json.dumps(data, indent=2)
         if path:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(out)
+            try:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(out, encoding="utf-8")
+            except OSError as exc:
+                import logging
+                logging.getLogger(__name__).error("Failed to write report to %s: %s", path, exc)
+                raise
         return out
 
 
