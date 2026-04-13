@@ -12,11 +12,11 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Generator
 
 
 DB_SCHEMA = """
@@ -62,7 +62,7 @@ class RunRecord:
 
     def __post_init__(self) -> None:
         if not self.ran_at:
-            self.ran_at = datetime.now(timezone.utc).isoformat()
+            self.ran_at = datetime.now(UTC).isoformat()
 
 
 class ScenarioCatalog:
@@ -104,7 +104,7 @@ class ScenarioCatalog:
             s.description,
             s.map_id,
             json.dumps(s.tags),
-            datetime.now(timezone.utc).isoformat(),
+            datetime.now(UTC).isoformat(),
         )
 
     _SCENARIO_UPSERT = """

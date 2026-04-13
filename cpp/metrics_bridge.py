@@ -68,7 +68,7 @@ def compute_comfort_score(
 
 def _py_min_ttc(ego_pos, npc_pos, ego_speeds, npc_speeds, radius):
     min_ttc = 999.0
-    for i, (ep, np_) in enumerate(zip(ego_pos, npc_pos)):
+    for i, (ep, np_) in enumerate(zip(ego_pos, npc_pos, strict=True)):
         dx, dy = np_[0] - ep[0], np_[1] - ep[1]
         dist = math.sqrt(dx * dx + dy * dy)
         if dist < radius:

@@ -26,8 +26,8 @@ Real-world sensor specs sourced from:
 from __future__ import annotations
 
 import random
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from scenarios.schema import Scenario, SensorSpec, VehicleProfile
 
@@ -268,9 +268,8 @@ class LegacyADASAdapter:
             )
 
         # Collision: additional probability from degraded perception
-        if "collision_count" in degraded and degraded["collision_count"] == 0:
-            if rng.random() < d.collision_prob_add:
-                degraded["collision_count"] = 1
+        if "collision_count" in degraded and degraded["collision_count"] == 0 and rng.random() < d.collision_prob_add:
+            degraded["collision_count"] = 1
 
         # Reaction latency: add to duration metadata
         degraded["aeb_reaction_time_s"] = spec.aeb_reaction_time_s
