@@ -4,6 +4,7 @@ Python bridge for the C++ metrics engine.
 Falls back to pure-Python implementations when the compiled
 extension is not available (e.g., CI without build toolchain).
 """
+
 from __future__ import annotations
 
 import logging
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 try:
     import av_metrics_cpp as _cpp  # type: ignore[import]
+
     _CPP_AVAILABLE = True
     logger.info("C++ metrics engine loaded (av_metrics_cpp)")
 except ImportError:
@@ -65,6 +67,7 @@ def compute_comfort_score(
 # ---------------------------------------------------------------------------
 # Pure-Python fallbacks
 # ---------------------------------------------------------------------------
+
 
 def _py_min_ttc(ego_pos, npc_pos, ego_speeds, npc_speeds, radius):
     min_ttc = 999.0

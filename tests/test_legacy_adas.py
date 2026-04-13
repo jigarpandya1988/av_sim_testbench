@@ -1,33 +1,38 @@
 """
 Tests for legacy ADAS vehicle profiles, degradation model, and scenario generator.
 """
+
 from __future__ import annotations
 
 import asyncio
+
 import pytest
 
-from adapters.legacy_adas import LegacyADASAdapter, VEHICLE_PROFILES, _compute_degradation
-from scenarios.generator import ScenarioGenerator
-from scenarios.schema import ScenarioCategory, SensorSpec, VehicleProfile, WeatherCondition
-from runner.engine import SimulationRunner
+from adapters.legacy_adas import VEHICLE_PROFILES, LegacyADASAdapter, _compute_degradation
 from metrics.scoring import MetricsScorer
-
+from runner.engine import SimulationRunner
+from scenarios.generator import ScenarioGenerator
+from scenarios.schema import ScenarioCategory, SensorSpec
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def gen1_profile():
     return VEHICLE_PROFILES["2015_honda_civic_lanewatch"]
+
 
 @pytest.fixture
 def gen2_profile():
     return VEHICLE_PROFILES["2018_volvo_xc60_pilot_assist"]
 
+
 @pytest.fixture
 def av_profile():
     return VEHICLE_PROFILES["2023_av_platform"]
+
 
 @pytest.fixture
 def generator():
@@ -38,8 +43,8 @@ def generator():
 # VehicleProfile & SensorSpec
 # ---------------------------------------------------------------------------
 
-class TestVehicleProfiles:
 
+class TestVehicleProfiles:
     def test_all_profiles_have_required_fields(self):
         for key, profile in VEHICLE_PROFILES.items():
             assert profile.name, f"{key} missing name"
@@ -61,8 +66,8 @@ class TestVehicleProfiles:
 # Degradation model
 # ---------------------------------------------------------------------------
 
-class TestDegradationModel:
 
+class TestDegradationModel:
     def test_no_degradation_for_perfect_sensors(self):
         perfect = SensorSpec(
             radar_range_m=200.0,
@@ -98,8 +103,8 @@ class TestDegradationModel:
 # LegacyADASAdapter
 # ---------------------------------------------------------------------------
 
-class TestLegacyADASAdapter:
 
+class TestLegacyADASAdapter:
     def test_av_profile_returns_unmodified_metrics(self, av_profile):
         """AV generation should pass through without degradation."""
         adapter = LegacyADASAdapter(profile=av_profile)
@@ -148,8 +153,8 @@ class TestLegacyADASAdapter:
 # Legacy scenario generator
 # ---------------------------------------------------------------------------
 
-class TestLegacyScenarioGenerator:
 
+class TestLegacyScenarioGenerator:
     def test_legacy_suite_generates_all_three_categories(self, generator, gen2_profile):
         scenarios = generator.legacy_adas_suite(gen2_profile)
         categories = {s.category for s in scenarios}
@@ -188,8 +193,8 @@ class TestLegacyScenarioGenerator:
 # End-to-end: legacy suite through runner + scorer
 # ---------------------------------------------------------------------------
 
-class TestLegacyEndToEnd:
 
+class TestLegacyEndToEnd:
     def _run_profile(self, profile):
         gen = ScenarioGenerator()
         scorer = MetricsScorer()

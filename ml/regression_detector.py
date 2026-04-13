@@ -4,6 +4,7 @@ ML model regression detection for AV perception/planning models.
 Compares metric distributions between model versions using
 statistical tests to flag regressions with confidence bounds.
 """
+
 from __future__ import annotations
 
 import logging
@@ -34,11 +35,11 @@ class MLRegressionDetector:
 
     # Max allowed degradation per metric (negative = lower is worse)
     _REGRESSION_THRESHOLDS = {
-        "collision_rate": 0.01,       # absolute increase
-        "min_ttc_s": -0.3,            # seconds drop
-        "avg_jerk_mps3": 0.5,         # m/s³ increase
-        "lane_deviation_m": 0.1,      # meter increase
-        "completion_rate": -0.02,     # fraction drop
+        "collision_rate": 0.01,  # absolute increase
+        "min_ttc_s": -0.3,  # seconds drop
+        "avg_jerk_mps3": 0.5,  # m/s³ increase
+        "lane_deviation_m": 0.1,  # meter increase
+        "completion_rate": -0.02,  # fraction drop
     }
 
     def compare(
@@ -93,15 +94,17 @@ class MLRegressionDetector:
             if regressed:
                 logger.warning("ML REGRESSION [%s]: %s", key, note)
 
-            comparisons.append(ModelComparison(
-                metric=key,
-                baseline_mean=round(base_mean, 4),
-                candidate_mean=round(cand_mean, 4),
-                delta_pct=round(delta_pct, 2),
-                p_value=round(p_value, 4),
-                regressed=regressed,
-                note=note,
-            ))
+            comparisons.append(
+                ModelComparison(
+                    metric=key,
+                    baseline_mean=round(base_mean, 4),
+                    candidate_mean=round(cand_mean, 4),
+                    delta_pct=round(delta_pct, 2),
+                    p_value=round(p_value, 4),
+                    regressed=regressed,
+                    note=note,
+                )
+            )
 
         return comparisons
 
@@ -110,13 +113,16 @@ class MLRegressionDetector:
 # Stats helpers (no scipy dependency)
 # ---------------------------------------------------------------------------
 
+
 def _mean(vals: list[float]) -> float:
     return sum(vals) / len(vals)
 
 
-def _welch_t_test(a: list[float], b: list[float], mean_a: float | None = None, mean_b: float | None = None) -> float:
+def _welch_t_test(
+    a: list[float], b: list[float], mean_a: float | None = None, mean_b: float | None = None
+) -> float:
     """Return approximate two-tailed p-value using Welch's t-test.
-    
+
     Accepts pre-computed means to avoid redundant recalculation.
     """
     n1, n2 = len(a), len(b)

@@ -6,19 +6,21 @@ or remote (AWS, GCP, on-prem) with zero code changes.
 
 Falls back to the async SimulationRunner when Ray is not installed.
 """
+
 from __future__ import annotations
 
 import logging
 import time
-from typing import Callable
+from collections.abc import Callable
 
-from scenarios.schema import Scenario
 from runner.engine import RunResult, RunStatus, _mock_sim_adapter
+from scenarios.schema import Scenario
 
 logger = logging.getLogger(__name__)
 
 try:
     import ray
+
     _RAY_AVAILABLE = True
 except ImportError:
     _RAY_AVAILABLE = False
@@ -50,7 +52,9 @@ def run_suite_distributed(
     if not _RAY_AVAILABLE:
         logger.warning("Falling back to async runner (Ray not available)")
         import asyncio
+
         from runner.engine import SimulationRunner
+
         runner = SimulationRunner(
             sim_adapter=sim_adapter,
             workers=num_cpus or workers or 8,
@@ -71,7 +75,9 @@ def run_suite_distributed(
         try:
             metrics = adapter(scenario)
             elapsed = time.monotonic() - start
-            status = RunStatus.PASSED if metrics.get("collision_count", 0) == 0 else RunStatus.FAILED
+            status = (
+                RunStatus.PASSED if metrics.get("collision_count", 0) == 0 else RunStatus.FAILED
+            )
             return RunResult(
                 scenario_id=scenario.scenario_id,
                 status=status,

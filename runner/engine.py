@@ -4,19 +4,20 @@ Async simulation execution engine.
 Runs scenarios in parallel worker pools with retry logic,
 timeout enforcement, and structured result collection.
 """
+
 import asyncio
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Callable
+from enum import StrEnum
 
 from scenarios.schema import Scenario
 
 logger = logging.getLogger(__name__)
 
 
-class RunStatus(str, Enum):
+class RunStatus(StrEnum):
     PASSED = "passed"
     FAILED = "failed"
     TIMEOUT = "timeout"
@@ -64,9 +65,7 @@ class SimulationRunner:
         results = await asyncio.gather(*tasks, return_exceptions=False)
         return list(results)
 
-    async def _run_with_semaphore(
-        self, scenario: Scenario, sem: asyncio.Semaphore
-    ) -> RunResult:
+    async def _run_with_semaphore(self, scenario: Scenario, sem: asyncio.Semaphore) -> RunResult:
         async with sem:
             return await self._run_scenario(scenario)
 
@@ -81,8 +80,11 @@ class SimulationRunner:
                 )
                 elapsed = time.monotonic() - start
                 from metrics.scoring import MetricsScorer
+
                 scorer = MetricsScorer()
-                score = scorer._score_result(RunResult(scenario.scenario_id, RunStatus.PASSED, elapsed, metrics))
+                score = scorer._score_result(
+                    RunResult(scenario.scenario_id, RunStatus.PASSED, elapsed, metrics)
+                )
                 status = RunStatus.PASSED if score.passed else RunStatus.FAILED
                 logger.info("[%s] %s in %.2fs", status.value.upper(), scenario.scenario_id, elapsed)
                 return RunResult(
@@ -92,16 +94,29 @@ class SimulationRunner:
                     metrics=metrics,
                     retries=attempt,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 elapsed = time.monotonic() - start
-                logger.warning("TIMEOUT %s after %.1fs (attempt %d)", scenario.scenario_id, elapsed, attempt + 1)
+                logger.warning(
+                    "TIMEOUT %s after %.1fs (attempt %d)",
+                    scenario.scenario_id,
+                    elapsed,
+                    attempt + 1,
+                )
                 if attempt == self._max_retries:
-                    return RunResult(scenario.scenario_id, RunStatus.TIMEOUT, elapsed, retries=attempt)
+                    return RunResult(
+                        scenario.scenario_id, RunStatus.TIMEOUT, elapsed, retries=attempt
+                    )
             except Exception as exc:  # noqa: BLE001
                 elapsed = time.monotonic() - start
                 logger.error("ERROR %s: %s (attempt %d)", scenario.scenario_id, exc, attempt + 1)
                 if attempt == self._max_retries:
-                    return RunResult(scenario.scenario_id, RunStatus.ERROR, elapsed, error=str(exc), retries=attempt)
+                    return RunResult(
+                        scenario.scenario_id,
+                        RunStatus.ERROR,
+                        elapsed,
+                        error=str(exc),
+                        retries=attempt,
+                    )
             attempt += 1
             await asyncio.sleep(0.5 * attempt)  # exponential backoff
 
@@ -113,12 +128,14 @@ class SimulationRunner:
 # Mock adapter — replace with real sim backend (CARLA, LGSVL, NVIDIA DRIVE Sim)
 # ---------------------------------------------------------------------------
 
+
 def _mock_sim_adapter(scenario: Scenario) -> dict:
     """
     Stub that simulates a scenario run and returns synthetic metrics.
     Replace with actual simulator SDK calls.
     """
     import random
+
     rng = random.Random(scenario.scenario_id)
     time.sleep(rng.uniform(0.05, 0.3))  # simulate variable run time
 
@@ -126,7 +143,7 @@ def _mock_sim_adapter(scenario: Scenario) -> dict:
     collision_prob = 0.0
     if scenario.vehicle_profile and scenario.vehicle_profile.adas_generation != "av":
         collision_prob = 0.02  # small base for degraded vehicles
-    
+
     if scenario.weather.rain_intensity > 0.7:
         collision_prob += 0.05
     if scenario.weather.fog_density > 0.7:
@@ -135,17 +152,17 @@ def _mock_sim_adapter(scenario: Scenario) -> dict:
     # Base metrics (modern AV baseline)
     res = {
         "collision_count": 1 if rng.random() < collision_prob else 0,
-        "min_ttc_s": rng.uniform(2.5, 8.0),             # safely above 1.5s threshold
-        "avg_jerk_mps3": rng.uniform(0.1, 2.5),          # safely below 3.0 threshold
-        "lane_deviation_m": rng.uniform(0.0, 0.4),      # safely below 0.5 threshold
-        "completion_rate": 1.0,                         # always complete
-        "speed_limit_violations": 0,                    # no speed violations
+        "min_ttc_s": rng.uniform(2.5, 8.0),  # safely above 1.5s threshold
+        "avg_jerk_mps3": rng.uniform(0.1, 2.5),  # safely below 3.0 threshold
+        "lane_deviation_m": rng.uniform(0.0, 0.4),  # safely below 0.5 threshold
+        "completion_rate": 1.0,  # always complete
+        "speed_limit_violations": 0,  # no speed violations
     }
-    
+
     # Inject one failure occasionally if it's NOT a smoke scenario (to keep tests interesting)
     # But for smoke/highway/pedestrian/adverse_weather suites, we want stability
     is_ci_suite = any(t in scenario.tags for t in ["smoke", "highway", "pedestrian", "weather"])
     if not is_ci_suite and rng.random() < 0.05:
         res["speed_limit_violations"] = 1
-        
+
     return res

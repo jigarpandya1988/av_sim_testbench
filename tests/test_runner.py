@@ -1,7 +1,10 @@
 """Tests for the async simulation runner."""
+
 import asyncio
+
 import pytest
-from runner.engine import SimulationRunner, RunStatus
+
+from runner.engine import RunStatus, SimulationRunner
 from scenarios.generator import ScenarioGenerator
 
 
@@ -29,6 +32,7 @@ class TestSimulationRunner:
 
         def slow_adapter(s):
             import time
+
             time.sleep(10)
             return {}
 

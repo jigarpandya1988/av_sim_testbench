@@ -4,6 +4,7 @@ AV performance metrics scoring and suite-level reporting.
 Computes per-scenario scores and aggregates into a SuiteReport
 with pass/fail thresholds aligned to ISO 21448 (SOTIF) guidance.
 """
+
 from __future__ import annotations
 
 import json
@@ -12,18 +13,18 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from runner.engine import RunResult, RunStatus
+    from runner.engine import RunResult
 
 
 # ---------------------------------------------------------------------------
 # Thresholds (tune per program requirements)
 # ---------------------------------------------------------------------------
 THRESHOLDS = {
-    "collision_count": 0,          # zero tolerance
-    "min_ttc_s": 1.5,              # must stay above 1.5 s
-    "avg_jerk_mps3": 3.0,          # comfort limit
-    "lane_deviation_m": 0.5,       # max lateral error
-    "completion_rate": 1.0,        # must complete scenario
+    "collision_count": 0,  # zero tolerance
+    "min_ttc_s": 1.5,  # must stay above 1.5 s
+    "avg_jerk_mps3": 3.0,  # comfort limit
+    "lane_deviation_m": 0.5,  # max lateral error
+    "completion_rate": 1.0,  # must complete scenario
     "speed_limit_violations": 0,
 }
 
@@ -34,7 +35,7 @@ class ScenarioScore:
     passed: bool
     violations: list[str]
     raw_metrics: dict
-    weighted_score: float          # 0.0 (worst) – 1.0 (perfect)
+    weighted_score: float  # 0.0 (worst) – 1.0 (perfect)
 
 
 @dataclass
@@ -77,6 +78,7 @@ class SuiteReport:
                 path.write_text(out, encoding="utf-8")
             except OSError as exc:
                 import logging
+
                 logging.getLogger(__name__).error("Failed to write report to %s: %s", path, exc)
                 raise
         return out
@@ -96,8 +98,8 @@ class MetricsScorer:
 
     def score_suite(
         self,
-        results: list["RunResult"],
-        scenarios_by_id: dict[str, "Scenario"] | None = None,  # noqa: F821
+        results: list[RunResult],
+        scenarios_by_id: dict[str, Scenario] | None = None,  # noqa: F821
     ) -> SuiteReport:
         from runner.engine import RunStatus
 
@@ -149,7 +151,7 @@ class MetricsScorer:
             category_breakdown=category_stats,
         )
 
-    def _score_result(self, result: "RunResult") -> ScenarioScore:
+    def _score_result(self, result: RunResult) -> ScenarioScore:
         m = result.metrics
         violations = []
 

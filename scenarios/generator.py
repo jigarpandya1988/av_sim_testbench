@@ -4,10 +4,11 @@ Parameterized scenario generator.
 Produces combinatorial scenario suites for edge-case coverage,
 supporting both structured generation and random fuzzing.
 """
+
 import hashlib
 import itertools
 import random
-from typing import Iterator
+from collections.abc import Iterator
 
 from .schema import Actor, Scenario, ScenarioCategory, VehicleProfile, WeatherCondition
 
@@ -22,7 +23,7 @@ class ScenarioGenerator:
     """Generate AV test scenarios from parameter grids or random sampling."""
 
     # Default parameter space for combinatorial generation
-    _SPEED_RANGE_MPS = [8.0, 15.0, 25.0, 33.0]   # ~30, 55, 90, 120 km/h
+    _SPEED_RANGE_MPS = [8.0, 15.0, 25.0, 33.0]  # ~30, 55, 90, 120 km/h
     _WEATHER_PRESETS = [
         WeatherCondition(0.0, 0.0, "day"),
         WeatherCondition(0.5, 0.0, "day"),
@@ -43,7 +44,9 @@ class ScenarioGenerator:
                 trajectory=self._cut_in_trajectory(side=side),
             )
             s = Scenario(
-                scenario_id=_stable_id("cut_in", speed, weather.time_of_day, weather.rain_intensity),
+                scenario_id=_stable_id(
+                    "cut_in", speed, weather.time_of_day, weather.rain_intensity
+                ),
                 category=ScenarioCategory.CUT_IN,
                 description=f"Cut-in at {speed} m/s, weather={weather.time_of_day}",
                 ego_initial_speed_mps=speed,
@@ -164,7 +167,7 @@ class ScenarioGenerator:
     def _legacy_lka_suite(self, profile: "VehicleProfile") -> list[Scenario]:  # noqa: F821
         """LKA scenarios: lane departure on straight and curved road."""
         scenarios = []
-        for speed in [20.0, 25.0, 30.0]:   # 72–108 km/h — LKA operational range
+        for speed in [20.0, 25.0, 30.0]:  # 72–108 km/h — LKA operational range
             for weather in [
                 WeatherCondition(0.0, 0.0, "day"),
                 WeatherCondition(0.5, 0.0, "night"),  # faded lane markings + dark
@@ -196,15 +199,19 @@ class ScenarioGenerator:
                 initial_speed_mps=ego_speed - 3.0,  # lead vehicle slightly slower
                 trajectory=[
                     {"x": follow_gap_m, "y": 0.0, "heading": 0.0, "t": 0.0},
-                    {"x": follow_gap_m + (ego_speed - 3.0) * 20, "y": 0.0, "heading": 0.0, "t": 20.0},
+                    {
+                        "x": follow_gap_m + (ego_speed - 3.0) * 20,
+                        "y": 0.0,
+                        "heading": 0.0,
+                        "t": 20.0,
+                    },
                 ],
             )
             s = Scenario(
                 scenario_id=_stable_id("legacy_acc", profile.name, ego_speed, follow_gap_m),
                 category=ScenarioCategory.LEGACY_ACC,
                 description=(
-                    f"ACC [{profile.name}]: ego {ego_speed:.0f} m/s, "
-                    f"gap {follow_gap_m:.0f} m"
+                    f"ACC [{profile.name}]: ego {ego_speed:.0f} m/s, gap {follow_gap_m:.0f} m"
                 ),
                 ego_initial_speed_mps=ego_speed,
                 map_id="highway_101",

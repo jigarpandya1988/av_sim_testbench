@@ -23,6 +23,7 @@ Real-world sensor specs sourced from:
   - Continental ARS408 radar datasheet
   - Bosch iBooster reaction time specs
 """
+
 from __future__ import annotations
 
 import random
@@ -30,7 +31,6 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from scenarios.schema import Scenario, SensorSpec, VehicleProfile
-
 
 # ---------------------------------------------------------------------------
 # Pre-built vehicle profiles
@@ -43,20 +43,19 @@ VEHICLE_PROFILES: dict[str, VehicleProfile] = {
         model_year=2015,
         adas_generation="gen1",
         sensors=SensorSpec(
-            radar_range_m=0.0,            # no radar — camera only
+            radar_range_m=0.0,  # no radar — camera only
             radar_range_accuracy_m=999.0,
             radar_velocity_accuracy_mps=999.0,
-            camera_fov_deg=50.0,          # narrow forward camera
+            camera_fov_deg=50.0,  # narrow forward camera
             camera_resolution="480p",
-            camera_latency_ms=120.0,      # EyeQ2 pipeline latency
-            aeb_reaction_time_s=0.6,      # slow: camera-only detection
-            lka_correction_rate=0.5,      # limited steering authority
+            camera_latency_ms=120.0,  # EyeQ2 pipeline latency
+            aeb_reaction_time_s=0.6,  # slow: camera-only detection
+            lka_correction_rate=0.5,  # limited steering authority
             has_lidar=False,
             has_rtk_gps=False,
         ),
         notes="Camera-only AEB. No radar. LKA is advisory only.",
     ),
-
     # --- Gen1: basic radar + camera (Bosch mid-range radar) ---
     "2016_subaru_eyesight": VehicleProfile(
         name="2016_subaru_eyesight",
@@ -76,7 +75,6 @@ VEHICLE_PROFILES: dict[str, VehicleProfile] = {
         ),
         notes="Stereo camera fusion. Radar limited to 100m. EyeSight Gen2.",
     ),
-
     # --- Gen2: radar + camera fusion (Continental ARS408 era) ---
     "2018_volvo_xc60_pilot_assist": VehicleProfile(
         name="2018_volvo_xc60_pilot_assist",
@@ -96,7 +94,6 @@ VEHICLE_PROFILES: dict[str, VehicleProfile] = {
         ),
         notes="Pilot Assist II. Radar+camera fusion. Strong LKA authority.",
     ),
-
     "2019_tesla_model3_autopilot": VehicleProfile(
         name="2019_tesla_model3_autopilot",
         model_year=2019,
@@ -107,7 +104,7 @@ VEHICLE_PROFILES: dict[str, VehicleProfile] = {
             radar_velocity_accuracy_mps=0.15,
             camera_fov_deg=120.0,
             camera_resolution="1080p",
-            camera_latency_ms=45.0,       # HW2.5 neural net pipeline
+            camera_latency_ms=45.0,  # HW2.5 neural net pipeline
             aeb_reaction_time_s=0.28,
             lka_correction_rate=0.95,
             has_lidar=False,
@@ -115,7 +112,6 @@ VEHICLE_PROFILES: dict[str, VehicleProfile] = {
         ),
         notes="Autopilot HW2.5. Camera-primary, radar secondary. No lidar.",
     ),
-
     # --- Modern AV baseline (no degradation) ---
     "2023_av_platform": VehicleProfile(
         name="2023_av_platform",
@@ -142,16 +138,20 @@ VEHICLE_PROFILES: dict[str, VehicleProfile] = {
 # Degradation model
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class _DegradationFactors:
     """Computed degradation multipliers derived from a SensorSpec."""
-    ttc_penalty: float        # fraction subtracted from TTC (0 = none, 1 = total loss)
+
+    ttc_penalty: float  # fraction subtracted from TTC (0 = none, 1 = total loss)
     lane_dev_multiplier: float  # lane deviation amplification (1.0 = no change)
-    jerk_multiplier: float    # jerk amplification from late/harsh braking
-    collision_prob_add: float # additional collision probability
+    jerk_multiplier: float  # jerk amplification from late/harsh braking
+    collision_prob_add: float  # additional collision probability
 
 
-def _compute_degradation(spec: SensorSpec, weather_rain: float, weather_fog: float) -> _DegradationFactors:
+def _compute_degradation(
+    spec: SensorSpec, weather_rain: float, weather_fog: float
+) -> _DegradationFactors:
     """
     Derive degradation factors from sensor spec and weather conditions.
 
@@ -160,15 +160,15 @@ def _compute_degradation(spec: SensorSpec, weather_rain: float, weather_fog: flo
     """
     # Radar range penalty: reduced range → later detection → worse TTC
     radar_factor = min(spec.radar_range_m / 200.0, 1.0)  # normalised to 200m baseline
-    ttc_penalty = (1.0 - radar_factor) * 0.4             # up to 40% TTC reduction
+    ttc_penalty = (1.0 - radar_factor) * 0.4  # up to 40% TTC reduction
 
     # Camera latency penalty: higher latency → later reaction
     latency_factor = max(0.0, 1.0 - (spec.camera_latency_ms - 20.0) / 120.0)
-    ttc_penalty += (1.0 - latency_factor) * 0.2          # up to 20% additional
+    ttc_penalty += (1.0 - latency_factor) * 0.2  # up to 20% additional
 
     # Reaction time penalty: slower AEB → harsher braking when it fires
     reaction_excess = max(0.0, spec.aeb_reaction_time_s - 0.15)  # excess over AV baseline
-    jerk_multiplier = 1.0 + reaction_excess * 2.0         # more jerk from late hard braking
+    jerk_multiplier = 1.0 + reaction_excess * 2.0  # more jerk from late hard braking
 
     # LKA authority: lower authority → more lane deviation
     lane_dev_multiplier = 1.0 + (1.0 - spec.lka_correction_rate) * 1.5
@@ -195,6 +195,7 @@ def _compute_degradation(spec: SensorSpec, weather_rain: float, weather_fog: flo
 # Adapter
 # ---------------------------------------------------------------------------
 
+
 class LegacyADASAdapter:
     """
     Wraps a base sim adapter and applies VehicleProfile degradation.
@@ -217,6 +218,7 @@ class LegacyADASAdapter:
         self._profile = profile
         # Import here to avoid circular dependency
         from runner.engine import _mock_sim_adapter
+
         self._base = base_adapter or _mock_sim_adapter
 
     def __call__(self, scenario: Scenario) -> dict:
@@ -268,7 +270,11 @@ class LegacyADASAdapter:
             )
 
         # Collision: additional probability from degraded perception
-        if "collision_count" in degraded and degraded["collision_count"] == 0 and rng.random() < d.collision_prob_add:
+        if (
+            "collision_count" in degraded
+            and degraded["collision_count"] == 0
+            and rng.random() < d.collision_prob_add
+        ):
             degraded["collision_count"] = 1
 
         # Reaction latency: add to duration metadata

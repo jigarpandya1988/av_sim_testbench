@@ -1,5 +1,5 @@
 """Tests for scenario generation."""
-import pytest
+
 from scenarios.generator import ScenarioGenerator
 from scenarios.schema import ScenarioCategory
 

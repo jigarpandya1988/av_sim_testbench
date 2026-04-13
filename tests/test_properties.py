@@ -4,36 +4,38 @@ Property-based tests using Hypothesis.
 These tests verify invariants that must hold for ALL valid inputs,
 not just the specific cases we thought to write manually.
 """
+
 from __future__ import annotations
 
-import math
-
-import pytest
-from hypothesis import given, settings, assume
+from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 
-from metrics.scoring import MetricsScorer, THRESHOLDS
-from runner.engine import RunResult, RunStatus
-from scenarios.schema import Scenario, ScenarioCategory, WeatherCondition
 from cpp.metrics_bridge import compute_comfort_score, compute_lane_deviation_rms
-
+from metrics.scoring import MetricsScorer
+from runner.engine import RunResult, RunStatus
 
 # ---------------------------------------------------------------------------
 # Strategies
 # ---------------------------------------------------------------------------
 
-valid_metrics = st.fixed_dictionaries({
-    "collision_count": st.integers(min_value=0, max_value=5),
-    "min_ttc_s": st.floats(min_value=0.0, max_value=20.0, allow_nan=False),
-    "avg_jerk_mps3": st.floats(min_value=0.0, max_value=10.0, allow_nan=False),
-    "lane_deviation_m": st.floats(min_value=0.0, max_value=2.0, allow_nan=False),
-    "completion_rate": st.floats(min_value=0.0, max_value=1.0, allow_nan=False),
-    "speed_limit_violations": st.integers(min_value=0, max_value=5),
-})
+valid_metrics = st.fixed_dictionaries(
+    {
+        "collision_count": st.integers(min_value=0, max_value=5),
+        "min_ttc_s": st.floats(min_value=0.0, max_value=20.0, allow_nan=False),
+        "avg_jerk_mps3": st.floats(min_value=0.0, max_value=10.0, allow_nan=False),
+        "lane_deviation_m": st.floats(min_value=0.0, max_value=2.0, allow_nan=False),
+        "completion_rate": st.floats(min_value=0.0, max_value=1.0, allow_nan=False),
+        "speed_limit_violations": st.integers(min_value=0, max_value=5),
+    }
+)
 
 run_result_strategy = st.builds(
     RunResult,
-    scenario_id=st.text(min_size=1, max_size=32, alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd"), whitelist_characters="_-")),
+    scenario_id=st.text(
+        min_size=1,
+        max_size=32,
+        alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd"), whitelist_characters="_-"),
+    ),
     status=st.just(RunStatus.PASSED),
     duration_s=st.floats(min_value=0.01, max_value=300.0, allow_nan=False),
     metrics=valid_metrics,
@@ -46,8 +48,8 @@ run_result_strategy = st.builds(
 # MetricsScorer invariants
 # ---------------------------------------------------------------------------
 
-class TestScorerProperties:
 
+class TestScorerProperties:
     @given(results=st.lists(run_result_strategy, min_size=1, max_size=50))
     @settings(max_examples=200)
     def test_pass_rate_always_in_0_1(self, results):
@@ -109,8 +111,8 @@ class TestScorerProperties:
 # C++ bridge / Python fallback invariants
 # ---------------------------------------------------------------------------
 
-class TestMetricsBridgeProperties:
 
+class TestMetricsBridgeProperties:
     @given(
         jerk=st.floats(min_value=0.0, max_value=10.0, allow_nan=False),
         dev=st.floats(min_value=0.0, max_value=2.0, allow_nan=False),
@@ -147,8 +149,8 @@ class TestMetricsBridgeProperties:
 # Scenario generator invariants
 # ---------------------------------------------------------------------------
 
-class TestScenarioGeneratorProperties:
 
+class TestScenarioGeneratorProperties:
     @given(
         n=st.integers(min_value=1, max_value=200),
         seed=st.integers(min_value=0, max_value=2**31),
@@ -156,6 +158,7 @@ class TestScenarioGeneratorProperties:
     @settings(max_examples=100)
     def test_fuzz_always_yields_n_scenarios(self, n, seed):
         from scenarios.generator import ScenarioGenerator
+
         gen = ScenarioGenerator()
         scenarios = list(gen.random_fuzz(n=n, seed=seed))
         assert len(scenarios) == n
@@ -164,6 +167,7 @@ class TestScenarioGeneratorProperties:
     @settings(max_examples=50)
     def test_fuzz_deterministic_for_same_seed(self, seed):
         from scenarios.generator import ScenarioGenerator
+
         gen = ScenarioGenerator()
         a = list(gen.random_fuzz(n=20, seed=seed))
         b = list(gen.random_fuzz(n=20, seed=seed))

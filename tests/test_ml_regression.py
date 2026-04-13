@@ -1,11 +1,15 @@
 """Tests for ML regression detection."""
-import pytest
+
 from ml.regression_detector import MLRegressionDetector
 
-
 BASE_METRICS = [
-    {"collision_rate": 0.02, "min_ttc_s": 4.0, "avg_jerk_mps3": 1.0,
-     "lane_deviation_m": 0.2, "completion_rate": 1.0}
+    {
+        "collision_rate": 0.02,
+        "min_ttc_s": 4.0,
+        "avg_jerk_mps3": 1.0,
+        "lane_deviation_m": 0.2,
+        "completion_rate": 1.0,
+    }
     for _ in range(30)
 ]
 

@@ -8,6 +8,7 @@ Usage:
     python main.py --suite full --distributed --workers 16
     python main.py --suite full --metrics-port 8000
 """
+
 from __future__ import annotations
 
 import argparse
@@ -15,14 +16,14 @@ import asyncio
 import sys
 from pathlib import Path
 
-from observability.logger import configure_logging, get_logger
-from scenarios.generator import ScenarioGenerator
-from runner.engine import SimulationRunner
+from catalog.store import RunRecord, ScenarioCatalog
 from metrics.scoring import MetricsScorer
-from replay.regression import ReplayRegressionRunner
-from catalog.store import ScenarioCatalog, RunRecord
+from observability.logger import configure_logging, get_logger
 from observability.metrics_exporter import SimMetricsExporter
+from replay.regression import ReplayRegressionRunner
 from reports.html_reporter import HTMLReporter
+from runner.engine import SimulationRunner
+from scenarios.generator import ScenarioGenerator
 
 logger = get_logger("main")
 
@@ -51,12 +52,18 @@ def parse_args() -> argparse.Namespace:
 def build_suite(suite_name: str):
     gen = ScenarioGenerator()
     match suite_name:
-        case "full":      return gen.full_suite()
-        case "smoke":     return gen.highway_cut_in_suite()[:5] + gen.pedestrian_crossing_suite()[:3]
-        case "highway":   return gen.highway_cut_in_suite()
-        case "pedestrian":return gen.pedestrian_crossing_suite()
-        case "weather":   return gen.adverse_weather_suite()
-        case _:           return gen.full_suite()
+        case "full":
+            return gen.full_suite()
+        case "smoke":
+            return gen.highway_cut_in_suite()[:5] + gen.pedestrian_crossing_suite()[:3]
+        case "highway":
+            return gen.highway_cut_in_suite()
+        case "pedestrian":
+            return gen.pedestrian_crossing_suite()
+        case "weather":
+            return gen.adverse_weather_suite()
+        case _:
+            return gen.full_suite()
 
 
 async def run_sim_suite(args: argparse.Namespace) -> int:
@@ -73,6 +80,7 @@ async def run_sim_suite(args: argparse.Namespace) -> int:
 
     if args.distributed:
         from runner.distributed import run_suite_distributed
+
         results = run_suite_distributed(scenarios, workers=args.workers, timeout_s=args.timeout)
     else:
         runner = SimulationRunner(workers=args.workers, timeout_s=args.timeout)
@@ -154,8 +162,12 @@ def run_replay(args: argparse.Namespace) -> int:
 
     logger.info("replay_complete", total=len(results), regressions=len(regressions))
     for r in regressions:
-        logger.warning("regression_detected", log_id=r.log_id,
-                       baseline=r.baseline_score, current=r.current_score)
+        logger.warning(
+            "regression_detected",
+            log_id=r.log_id,
+            baseline=r.baseline_score,
+            current=r.current_score,
+        )
 
     return 1 if regressions else 0
 

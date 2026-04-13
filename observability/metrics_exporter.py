@@ -7,18 +7,19 @@ by a Prometheus server or pushed to a Pushgateway in CI.
 Metrics naming follows Prometheus best practices:
   av_sim_<subsystem>_<metric>_<unit>
 """
+
 from __future__ import annotations
 
 try:
     from prometheus_client import (
+        REGISTRY,
         Counter,
         Gauge,
         Histogram,
-        CollectorRegistry,
         push_to_gateway,
         start_http_server,
-        REGISTRY,
     )
+
     _PROM_AVAILABLE = True
 except ImportError:
     _PROM_AVAILABLE = False

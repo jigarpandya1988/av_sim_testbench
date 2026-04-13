@@ -4,6 +4,7 @@ Structured logging configuration using structlog.
 Outputs JSON in production, human-readable in dev.
 Compatible with Datadog, Splunk, and CloudWatch log ingestion.
 """
+
 from __future__ import annotations
 
 import logging
@@ -43,7 +44,8 @@ def configure_logging(level: str = "INFO", json_output: bool | None = None) -> N
         renderer = structlog.dev.ConsoleRenderer(colors=True)
 
     structlog.configure(
-        processors=shared_processors + [
+        processors=shared_processors
+        + [
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
         logger_factory=structlog.stdlib.LoggerFactory(),

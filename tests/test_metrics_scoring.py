@@ -1,10 +1,12 @@
 """Tests for metrics scoring and suite reporting."""
-import pytest
+
+from metrics.scoring import MetricsScorer
 from runner.engine import RunResult, RunStatus
-from metrics.scoring import MetricsScorer, THRESHOLDS
 
 
-def _make_result(scenario_id: str, metrics: dict, status: RunStatus = RunStatus.PASSED) -> RunResult:
+def _make_result(
+    scenario_id: str, metrics: dict, status: RunStatus = RunStatus.PASSED
+) -> RunResult:
     return RunResult(scenario_id=scenario_id, status=status, duration_s=1.0, metrics=metrics)
 
 
@@ -65,6 +67,7 @@ class TestMetricsScorer:
 
     def test_json_report_serializable(self):
         import json
+
         result = _make_result("s9", CLEAN_METRICS)
         report = self.scorer.score_suite([result])
         raw = report.to_json()

@@ -4,6 +4,7 @@ Replay-based regression testing.
 Loads recorded real-world drive logs, converts them to sim scenarios,
 runs them through the current AV stack, and compares against a stored baseline.
 """
+
 from __future__ import annotations
 
 import json
@@ -69,17 +70,22 @@ class ReplayRegressionRunner:
             if regressed:
                 logger.warning(
                     "REGRESSION %s: %.3f → %.3f (Δ%.3f)",
-                    log_id, baseline_score, current_score, delta,
+                    log_id,
+                    baseline_score,
+                    current_score,
+                    delta,
                 )
 
-            results.append(ReplayResult(
-                log_id=log_id,
-                baseline_score=baseline_score,
-                current_score=current_score,
-                delta=delta,
-                regressed=regressed,
-                details=metrics,
-            ))
+            results.append(
+                ReplayResult(
+                    log_id=log_id,
+                    baseline_score=baseline_score,
+                    current_score=current_score,
+                    delta=delta,
+                    regressed=regressed,
+                    details=metrics,
+                )
+            )
 
         return results
 
@@ -99,12 +105,15 @@ class ReplayRegressionRunner:
         try:
             return json.loads(self._baseline_path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError) as exc:
-            logger.warning("Could not load baseline from %s: %s — starting fresh", self._baseline_path, exc)
+            logger.warning(
+                "Could not load baseline from %s: %s — starting fresh", self._baseline_path, exc
+            )
             return {}
 
     def _run_replay(self, log_path: Path) -> dict:
         """Execute replay in sim and return raw metrics. Stub — replace with sim SDK."""
         import random
+
         rng = random.Random(log_path.stem)
         return {
             "collision_count": 0,

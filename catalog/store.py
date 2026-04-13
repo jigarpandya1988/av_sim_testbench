@@ -8,6 +8,7 @@ Enables:
   - Trend analysis across model versions
   - Deduplication of scenario runs
 """
+
 from __future__ import annotations
 
 import json
@@ -17,7 +18,6 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-
 
 DB_SCHEMA = """
 CREATE TABLE IF NOT EXISTS scenarios (
@@ -128,9 +128,14 @@ class ScenarioCatalog:
     @staticmethod
     def _run_tuple(r: RunRecord) -> tuple:
         return (
-            r.scenario_id, r.model_version, r.status, r.duration_s,
-            json.dumps(r.metrics), json.dumps(r.violations),
-            r.weighted_score, r.ran_at,
+            r.scenario_id,
+            r.model_version,
+            r.status,
+            r.duration_s,
+            json.dumps(r.metrics),
+            json.dumps(r.violations),
+            r.weighted_score,
+            r.ran_at,
         )
 
     _RUN_INSERT = """
