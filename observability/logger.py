@@ -38,6 +38,9 @@ def configure_logging(level: str = "INFO", json_output: bool | None = None) -> N
         structlog.processors.StackInfoRenderer(),
     ]
 
+    from typing import Any
+
+    renderer: Any
     if json_output:
         renderer = structlog.processors.JSONRenderer()
     else:

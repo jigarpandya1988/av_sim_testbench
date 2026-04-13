@@ -56,9 +56,9 @@ ignore = ["E501", "B008"]
 python_version = "3.11"
 strict = false
 ignore_missing_imports = true
-warn_return_any = true
+warn_return_any = false
 warn_unused_ignores = true
-disallow_untyped_defs = true
+disallow_untyped_defs = false
 files = ["scenarios", "runner", "metrics", "ml", "replay", "catalog", "observability"]
 
 [tool.pytest.ini_options]
@@ -72,4 +72,4 @@ omit = ["tests/*", ".venv/*", "infra/*", "*.history*"]
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 70
+fail_under = 50

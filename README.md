@@ -73,6 +73,30 @@ Designed to evaluate AV stack performance across thousands of synthetic and repl
 
 ---
 
+## Local CI Testing
+To ensure your changes pass the GitHub CI pipeline, you can run the local CI script:
+
+```bash
+# On Windows
+./check_ci.bat
+
+# On Linux/macOS
+python scripts/check_ci.py
+```
+
+This script runs linting, type checking, unit tests with coverage, and the smoke scenario suite.
+
+## Build and Auto-Linting
+To keep your code clean and ensure everything is built correctly:
+
+```bash
+# To automatically fix linting errors and format code
+./lint.bat  (or python scripts/auto_lint.py)
+
+# To run a full build (linting + tests + type checking)
+./build.bat (or python scripts/build_project.py)
+```
+
 ## Quick Start
 
 ```bash

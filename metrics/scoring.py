@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from runner.engine import RunResult
+    from scenarios.schema import Scenario
 
 
 # ---------------------------------------------------------------------------
@@ -99,7 +100,7 @@ class MetricsScorer:
     def score_suite(
         self,
         results: list[RunResult],
-        scenarios_by_id: dict[str, Scenario] | None = None,  # noqa: F821
+        scenarios_by_id: dict[str, Scenario] | None = None,
     ) -> SuiteReport:
         from runner.engine import RunStatus
 
