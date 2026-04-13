@@ -11,5 +11,9 @@ hypothesis>=6.100
 ruff>=0.3
 mypy>=1.8
 
-# Optional distributed runner (install separately)
+# Simulation Backends (Optional)
 # ray>=2.9
+# carla>=0.9.15  # 3D simulation (requires CARLA server)
+numpy>=1.24
+scipy>=1.10
+pygame>=2.5.0

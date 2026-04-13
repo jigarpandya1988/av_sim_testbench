@@ -159,7 +159,7 @@ class ScenarioCatalog:
 
     def pass_rate_by_category(self, model_version: str | None = None) -> dict[str, float]:
         """Return pass rate per scenario category."""
-        query = """
+        query_base = """
             SELECT s.category,
                    SUM(CASE WHEN r.status = 'passed' THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS pass_rate
             FROM runs r
@@ -167,10 +167,13 @@ class ScenarioCatalog:
             {where}
             GROUP BY s.category
         """
-        where = "WHERE r.model_version = ?" if model_version else ""
+        where_clause = "WHERE r.model_version = ?" if model_version else ""
         params = (model_version,) if model_version else ()
+
         with self._conn() as conn:
-            rows = conn.execute(query.format(where=where), params).fetchall()
+            # query.format is only used for the static where_clause string,
+            # while values are safely passed via params.
+            rows = conn.execute(query_base.format(where=where_clause), params).fetchall()
         return {row["category"]: round(row["pass_rate"], 4) for row in rows}
 
     def flaky_scenarios(self, min_runs: int = 5, max_pass_rate: float = 0.8) -> list[dict]:

@@ -126,16 +126,23 @@ def _welch_t_test(
     Accepts pre-computed means to avoid redundant recalculation.
     """
     n1, n2 = len(a), len(b)
+    # Avoid zero-length lists
+    if n1 < 2 or n2 < 2:
+        return 1.0 if mean_a == mean_b else 0.0
+
     # Reuse pre-computed means if provided
     ma = mean_a if mean_a is not None else _mean(a)
     mb = mean_b if mean_b is not None else _mean(b)
-    v1 = sum((v - ma) ** 2 for v in a) / max(n1 - 1, 1)
-    v2 = sum((v - mb) ** 2 for v in b) / max(n2 - 1, 1)
+    # Variance (unbiased estimator)
+    v1 = sum((v - ma) ** 2 for v in a) / (n1 - 1)
+    v2 = sum((v - mb) ** 2 for v in b) / (n2 - 1)
     if v1 == 0 and v2 == 0:
-        return 0.0 if ma != mb else 1.0
-    se = math.sqrt(v1 / n1 + v2 / n2)
+        return 1.0 if ma == mb else 0.0
+    # Standard error of the difference
+    se = math.sqrt((v1 / n1) + (v2 / n2))
     if se == 0:
-        return 1.0
+        return 1.0 if ma == mb else 0.0
+    # Welch's t-statistic
     t = (ma - mb) / se
     p = 2 * (1 - _norm_cdf(abs(t)))
     return max(0.0, min(1.0, p))

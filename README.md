@@ -57,6 +57,7 @@ Designed to evaluate AV stack performance across thousands of synthetic and repl
 
 | Feature | Details |
 |---|---|
+| 3D Simulation | **CARLA Simulator** integration for high-fidelity 3D validation |
 | Scenario Generation | Combinatorial + fuzz (cut-in, pedestrian, weather, intersection) |
 | Async Runner | Worker pool, per-scenario timeout, exponential backoff retry |
 | Distributed Runner | Ray cluster scale-out, zero code change from local |
@@ -96,6 +97,18 @@ To keep your code clean and ensure everything is built correctly:
 # To run a full build (linting + tests + type checking)
 ./build.bat (or python scripts/build_project.py)
 ```
+
+## CARLA 3D Simulation
+The testbench now supports 3D visualization using the CARLA simulator.
+
+1. **Install CARLA:** Download and install the [CARLA Simulator](https://carla.org/).
+2. **Install Python Client:** `pip install carla`
+3. **Start CARLA Server:** Run `CarlaUE4.exe` (Windows) or `./CarlaUE4.sh` (Linux).
+4. **Run Testbench with CARLA:**
+   ```bash
+   python main.py --suite smoke --sim carla --workers 1
+   ```
+   *Note: Running multiple workers with CARLA requires a high-performance GPU.*
 
 ## Quick Start
 

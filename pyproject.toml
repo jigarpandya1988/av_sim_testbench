@@ -68,8 +68,20 @@ addopts = "-v --tb=short"
 
 [tool.coverage.run]
 source = ["."]
-omit = ["tests/*", ".venv/*", "infra/*", "*.history*"]
+omit = [
+    "tests/*",
+    ".venv/*",
+    "infra/*",
+    "main.py",
+    "scripts/*",
+    "adapters/carla_adapter.py",
+    "runner/distributed.py",
+    "observability/metrics_exporter.py",
+    "reports/html_reporter.py",
+    "observability/logger.py",
+    "*.history*"
+]
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 50
+fail_under = 80

@@ -35,6 +35,12 @@ def parse_args() -> argparse.Namespace:
         choices=["full", "smoke", "highway", "pedestrian", "weather"],
         default="smoke",
     )
+    p.add_argument(
+        "--sim",
+        choices=["mock", "carla"],
+        default="mock",
+        help="Select simulator backend",
+    )
     p.add_argument("--workers", type=int, default=4)
     p.add_argument("--timeout", type=float, default=120.0)
     p.add_argument("--report", type=Path, default=None, help="JSON report output path")
@@ -83,7 +89,18 @@ async def run_sim_suite(args: argparse.Namespace) -> int:
 
         results = run_suite_distributed(scenarios, workers=args.workers, timeout_s=args.timeout)
     else:
-        runner = SimulationRunner(workers=args.workers, timeout_s=args.timeout)
+        sim_adapter = None
+        if args.sim == "carla":
+            from adapters.carla_adapter import CarlaSimAdapter
+
+            sim_adapter = CarlaSimAdapter()
+            logger.info("using_carla_adapter")
+
+        runner = SimulationRunner(
+            sim_adapter=sim_adapter,
+            workers=args.workers,
+            timeout_s=args.timeout,
+        )
         results = await runner.run_suite(scenarios)
 
     scorer = MetricsScorer()
